@@ -1,0 +1,1 @@
+# sk-event-sourcing-netcore
