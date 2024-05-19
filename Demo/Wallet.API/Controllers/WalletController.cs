@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
+using Wallet.API.Domain;
+using Wallet.API.Models;
 
 namespace Wallet.API.Controllers;
 
@@ -6,16 +8,27 @@ namespace Wallet.API.Controllers;
 [Route("[controller]")]
 public class WalletController : ControllerBase
 {
+    private readonly WalletDomainRepository _repository;
 
-    [HttpGet]
-    public async Task<IActionResult> GetWallets()
+    public WalletController(WalletDomainRepository repository)
     {
-
+        _repository = repository;
     }
 
-    [HttpGet("{id}")]
-    public IActionResult GetWallet(int walletId)
+    [HttpGet("{walletId}")]
+    public async Task<IActionResult> GetWallet(Guid walletId)
     {
-        return Ok();
+        var wallet = await _repository.GetAsync(walletId);
+
+        return Ok(wallet);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateWallet(CreateWalletDto model)
+    {
+        var wallet = new Wallet.API.Domain.Wallet(model.UserId);
+        
+        await _repository.SaveAsync(wallet);
+        return Ok(wallet);
     }
 }

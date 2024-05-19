@@ -1,4 +1,4 @@
-namespace SK.EventSourcing.Shared
+namespace SK.EventSourcing
 {
     using System;
     
