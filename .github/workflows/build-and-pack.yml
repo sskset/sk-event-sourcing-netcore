@@ -1,12 +1,9 @@
-name: Build and Pack .NET Library
+name: Build, Pack, and Release .NET Library
 
 on:
   push:
-    branches:
-      - release
-  pull_request:
-    branches:
-      - release
+    tags:
+      - 'v*.*.*'
 
 jobs:
   build:
@@ -19,22 +16,42 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '8.x'
+        dotnet-version: '8.x' # Use the specific version of .NET you need
 
     - name: Restore dependencies
-      run: dotnet restore
+      run: dotnet restore .\SK.EventSourcing.Package.sln
 
     - name: Build
-      run: dotnet build --configuration Release --no-restore
-
+      run: dotnet build .\SK.EventSourcing.Package.sln --configuration Release --no-restore
+    
     - name: Test
-      run: dotnet test
+      run: dotnet test .\SK.EventSourcing.Package.sln
 
     - name: Pack
-      run: dotnet pack --configuration Release --no-build --output ./nupkg
+      run: dotnet pack .\SK.EventSourcing.Package.sln --configuration Release --no-build --output ./nupkg
 
-    - name: Upload NuGet package
+    - name: Upload NuGet package as artifact
       uses: actions/upload-artifact@v3
       with:
         name: nuget-package
         path: ./nupkg/*.nupkg
+
+    - name: Install GitHub CLI
+      run: sudo apt-get install -y gh
+
+    - name: Create GitHub Release
+      id: create_release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        RELEASE_NAME="Release $TAG_NAME"
+        gh release create $TAG_NAME ./nupkg/*.nupkg --title "$RELEASE_NAME" --notes "Automated release for $TAG_NAME"
+
+    - name: Upload package to GitHub Release
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./nupkg/*.nupkg
+        asset_name: my-library-${{ github.ref_name }}.nupkg
+        asset_content_type: application/zip
