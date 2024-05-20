@@ -1,17 +1,22 @@
 using NEventStore;
-using SK.EventSourcing;
+using NEventStore.Persistence.Sql.SqlDialects;
+using NEventStore.Serialization.Json;
+using Npgsql;
+using System.Data.Common;
 using Wallet.API.Domain;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddScoped<WalletDomainRepository>();
+builder.Services.AddTransient<WalletDomainRepository>();
+DbProviderFactories.RegisterFactory("Npgsql", NpgsqlFactory.Instance);
 
 builder.Services.AddScoped<IStoreEvents>(sp =>
 {
@@ -24,8 +29,10 @@ builder.Services.AddScoped<IStoreEvents>(sp =>
     });
     return Wireup.Init()
         .WithLoggerFactory(loggerFactory)
-        .UsingInMemoryPersistence()
+        .UsingSqlPersistence(DbProviderFactories.GetFactory("Npgsql"), builder.Configuration["EventStore:ConnectionString"])
+        .WithDialect(new PostgreSqlDialect())
         .InitializeStorageEngine()
+        .UsingJsonSerialization()
         .Build();
 });
 

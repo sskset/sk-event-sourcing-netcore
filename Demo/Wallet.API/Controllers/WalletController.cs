@@ -5,7 +5,7 @@ using Wallet.API.Models;
 namespace Wallet.API.Controllers;
 
 [ApiController]
-[Route("[controller]")]
+[Route("wallet")]
 public class WalletController : ControllerBase
 {
     private readonly WalletDomainRepository _repository;
@@ -16,19 +16,39 @@ public class WalletController : ControllerBase
     }
 
     [HttpGet("{walletId}")]
-    public async Task<IActionResult> GetWallet(Guid walletId)
+    public IActionResult GetWallet(Guid walletId)
     {
-        var wallet = await _repository.GetAsync(walletId);
+        var wallet = _repository.Get(walletId);
 
         return Ok(wallet);
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateWallet(CreateWalletDto model)
+    public IActionResult CreateWallet(CreateWalletDto model)
     {
-        var wallet = new Wallet.API.Domain.Wallet(model.UserId);
+        var wallet = Wallet.API.Domain.Wallet.Create(model.UserId);
         
-        await _repository.SaveAsync(wallet);
+        _repository.Save(wallet);
+        return Ok(wallet);
+    }
+
+    [HttpPost("{walletId}/deposit")]
+    public IActionResult Deposit(DepositDto model)
+    {
+        var wallet = _repository.Get(model.WalletId);
+        wallet.Deposit(model.Amount);
+
+        _repository.Save(wallet);
+        return Ok(wallet);      
+    }
+
+    [HttpPost("{walletId}/withdraw")]
+    public IActionResult Withdraw(DepositDto model)
+    {
+        var wallet = _repository.Get(model.WalletId);
+        wallet.Withdraw(model.Amount);
+        _repository.Save(wallet);
+
         return Ok(wallet);
     }
 }

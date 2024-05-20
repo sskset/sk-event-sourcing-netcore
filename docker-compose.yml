@@ -1,5 +1,3 @@
-version: '3.4'
-
 services:
   # wallet.api:
   #   image: ${DOCKER_REGISTRY-}walletapi

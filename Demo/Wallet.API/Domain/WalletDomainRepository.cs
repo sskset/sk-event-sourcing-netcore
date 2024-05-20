@@ -12,31 +12,45 @@ public class WalletDomainRepository : IDomainRepository<Wallet>
     {
         _storeEvents = storeEvents;
     }
-    public Task<Wallet> GetAsync(Guid walletId)
+    public Wallet Get(Guid walletId)
     {
         using (var stream = _storeEvents.OpenStream(walletId, 0, int.MaxValue))
         {
-            stream.CommittedEvents
-        }
-
-        return Task.FromResult(null as Wallet);
-    }
-
-    public Task SaveAsync(Wallet wallet)
-    {
-
-        using (var stream = _storeEvents.CreateStream(wallet.Id))
-        {
-            foreach(var e in wallet.GetUncommittedChanges())
+            var wallet = new Wallet();
+            var domainEvents = new List<DomainEvent>();
+            foreach (var e in stream.CommittedEvents)
             {
-                var payload = JsonConvert.SerializeObject(e);
-                stream.Add(new EventMessage {  Body = payload });
+                if (e.Headers.TryGetValue("type", out var typeName))
+                {
+                    var de = (DomainEvent)JsonConvert.DeserializeObject(e.Body.ToString(), Type.GetType(typeName.ToString()));
+                    domainEvents.Add(de);
+                }
             }
 
+            wallet.LoadFromHistory(domainEvents);
+
+            return wallet;
+        }
+    }
+
+    public void Save(Wallet wallet)
+    {
+
+        using (var stream = _storeEvents.OpenStream(wallet.Id, 0, int.MaxValue))
+        {
+            foreach (var e in wallet.GetUncommittedChanges())
+            {
+                var payload = JsonConvert.SerializeObject(e);
+                stream.Add(new EventMessage
+                {
+                    Body = payload,
+                    Headers = new Dictionary<string, object>
+                    {
+                        { "type", e.GetType().FullName }
+                    }
+                });
+            }
             stream.CommitChanges(Guid.NewGuid());
         }
-
-
-        return Task.CompletedTask;
     }
 }

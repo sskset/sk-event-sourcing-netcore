@@ -1,5 +1,4 @@
 using SK.EventSourcing;
-using System.Runtime.CompilerServices;
 
 namespace Wallet.API.Domain;
 
@@ -9,19 +8,14 @@ public sealed class Wallet : SK.EventSourcing.AggregateRoot
     public decimal Balance { get; private set; }
 
 
-    private Wallet() { }
+    public Wallet() { }
 
     public static Wallet Create(Guid userId)
     {
-        var wallet = new Wallet
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            Balance = 0,
-            Version = 0,
-        };
+        var wallet = new Wallet();  
+        wallet.ApplyChange(new WalletCreated(userId, Guid.NewGuid()));
 
-        wallet.ApplyChange(new us)
+        return wallet;
     }
 
     public void Deposit(decimal amount)
@@ -62,10 +56,9 @@ public sealed class Wallet : SK.EventSourcing.AggregateRoot
 
     private void Apply(WalletCreated e)
     {
-        this.UserId = e.WalletCreated.UserId;
-        this.Id = e.WalletCreated.Id;
+        this.UserId = e.UserId;
+        this.Id = e.WalletId;
         this.Balance = 0m;
-        this.Version = e.WalletCreated.Version;
     }
 
     public class WithdrawWallet : DomainEvent
@@ -91,11 +84,13 @@ public sealed class Wallet : SK.EventSourcing.AggregateRoot
 
     public class WalletCreated : DomainEvent
     {
-        public WalletCreated(Wallet walletCreated)
+        public WalletCreated(Guid userId, Guid walletId)
         {
-            WalletCreated = walletCreated;
+            UserId = userId;
+            WalletId = walletId;
         }
 
-        public Wallet WalletCreated { get; set; }
+        public Guid UserId { get; set; }
+        public Guid WalletId { get; set; }
     }
 }

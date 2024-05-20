@@ -1,11 +1,10 @@
 
 using System;
-using System.Threading.Tasks;
 
 namespace SK.EventSourcing;
 
-public interface IDomainRepository<T> where T: AggregateRoot
+public interface IDomainRepository<T> where T: AggregateRoot, new()
 {
-    Task<T> GetAsync(Guid aggregateId);
-    Task SaveAsync(T aggregateRoot);
+    T Get(Guid aggregateId);
+    void Save(T aggregateRoot);
 }

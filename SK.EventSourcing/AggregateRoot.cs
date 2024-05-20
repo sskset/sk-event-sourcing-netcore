@@ -5,10 +5,10 @@ using System.Linq;
 
 public abstract class AggregateRoot
 {
-    private readonly List<DomainEvent> _changes = new List<DomainEvent>();
+    private readonly List<DomainEvent> _changes = [];
 
     public Guid Id { get; protected set; } = Guid.NewGuid();
-    public int Version { get; protected set; } = -1;
+    public int Version { get; protected set; } = 0;
 
     public IEnumerable<DomainEvent> GetUncommittedChanges() => _changes.AsEnumerable();
 
@@ -16,13 +16,16 @@ public abstract class AggregateRoot
 
     protected void ApplyChange(DomainEvent @event, bool isNew = true)
     {
-        this.GetType().GetMethod("Apply", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance, null, new[] { @event.GetType() }, null)
+        this.GetType()
+            .GetMethod("Apply", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance, null, [@event.GetType()], null)
             .Invoke(this, new[] { @event });
 
         if (isNew)
         {
             _changes.Add(@event);
         }
+
+        Version++;
     }
 
     public void LoadFromHistory(IEnumerable<DomainEvent> history)
@@ -30,7 +33,6 @@ public abstract class AggregateRoot
         foreach (var @event in history)
         {
             ApplyChange(@event, isNew: false);
-            Version++;
         }
     }
 }
