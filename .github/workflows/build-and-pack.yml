@@ -47,6 +47,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
+        echo $GITHUB_TOKEN
         if [ "$RELEASE_ID" == "null" ]; then
           gh release create $TAG_NAME ./nupkg/*.nupkg --title "Release $TAG_NAME" --notes "Automated release for $TAG_NAME"
         else
