@@ -19,16 +19,16 @@ jobs:
         dotnet-version: '8.x' # Use the specific version of .NET you need
 
     - name: Restore dependencies
-      run: dotnet restore .\SK.EventSourcing.Package.sln
+      run: dotnet restore SK.EventSourcing.Package.sln
 
     - name: Build
-      run: dotnet build .\SK.EventSourcing.Package.sln --configuration Release --no-restore
+      run: dotnet build SK.EventSourcing.Package.sln --configuration Release --no-restore
     
     - name: Test
-      run: dotnet test .\SK.EventSourcing.Package.sln
+      run: dotnet test SK.EventSourcing.Package.sln
 
     - name: Pack
-      run: dotnet pack .\SK.EventSourcing.Package.sln --configuration Release --no-build --output ./nupkg
+      run: dotnet pack SK.EventSourcing.Package.sln --configuration Release --no-build --output ./nupkg
 
     - name: Upload NuGet package as artifact
       uses: actions/upload-artifact@v3
