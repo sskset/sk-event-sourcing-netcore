@@ -45,8 +45,14 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         TAG_NAME=${GITHUB_REF#refs/tags/}
+        echo $TAG_NAME
+
         RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME --jq '.id' || echo 'null')
+        echo $RELEASE_ID
+
         echo "release_id=$RELEASE_ID" >> $GITHUB_ENV
+
+        echo $GITHUB_ENV
 
     - name: Create or Update GitHub Release
       id: create_update_release
