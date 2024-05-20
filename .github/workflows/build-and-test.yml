@@ -1,0 +1,26 @@
+name: Build and Test
+
+on:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.x' # Use the specific version of .NET you need
+
+    - name: Restore dependencies
+      run: dotnet restore SK.EventSourcing.sln
+
+    - name: Build
+      run: dotnet build SK.EventSourcing.sln --configuration Release --no-restore
+
+    - name: Test
+      run: dotnet test SK.EventSourcing.sln
