@@ -42,18 +42,31 @@ jobs:
         sudo apt-get install -y jq
         sudo apt-get install -y gh
 
-    - name: Create or Update GitHub Release
-      id: create_update_release
+    - name: Check if release exists
+      id: check_release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        echo $GITHUB_TOKEN
-        if [ "$RELEASE_ID" == "null" ]; then
-          gh release create $TAG_NAME ./nupkg/*.nupkg --title "Release $TAG_NAME" --notes "Automated release for $TAG_NAME"
-        else
-          gh release delete $TAG_NAME -y
-          gh release create $TAG_NAME ./nupkg/*.nupkg --title "Release $TAG_NAME" --notes "Automated release for $TAG_NAME"
-        fi
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME --jq '.id' || echo 'null')
+        echo "release_id=$RELEASE_ID" >> $GITHUB_ENV
+
+    - name: Create GitHub Release
+      if: env.release_id == 'null'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        gh release create $TAG_NAME ./nupkg/*.nupkg --title "Release $TAG_NAME" --notes "Automated release for $TAG_NAME"
+
+    - name: Update GitHub Release
+      if: env.release_id != 'null'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME --jq '.id')
+        gh release upload $RELEASE_ID ./nupkg/*.nupkg --clobber
 
     - name: Publish to GitHub Packages
       env:
@@ -65,7 +78,7 @@ jobs:
     - name: Upload package to GitHub Release
       uses: actions/upload-release-asset@v1
       with:
-        upload_url: ${{ steps.create_update_release.outputs.upload_url }}
+        upload_url: ${{ steps.check_release.outputs.upload_url }}
         asset_path: ./nupkg/*.nupkg
         asset_name: sk-eventsourcing-${{ github.ref_name }}.nupkg
         asset_content_type: application/zip
