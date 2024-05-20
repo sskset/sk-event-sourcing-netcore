@@ -36,40 +36,35 @@ jobs:
         name: nuget-package
         path: ./nupkg/*.nupkg
 
-    - name: Install GitHub CLI
-      run: sudo apt-get install -y gh jq
-
-    - name: Check if release exists
-      id: check_release
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install dependencies
       run: |
-        TAG_NAME=${GITHUB_REF#refs/tags/}
-        echo $TAG_NAME
-
-        RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME --jq '.id' || echo 'null')
-        echo $RELEASE_ID
-
-        echo "release_id=$RELEASE_ID" >> $GITHUB_ENV
-
-        echo $GITHUB_ENV
+        sudo apt-get update
+        sudo apt-get install -y jq
+        sudo apt-get install -y gh
 
     - name: Create or Update GitHub Release
       id: create_update_release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        if [ "$RELEASE_ID" != "null" ]; then
+        if [ "$RELEASE_ID" == "null" ]; then
+          gh release create $TAG_NAME ./nupkg/*.nupkg --title "Release $TAG_NAME" --notes "Automated release for $TAG_NAME"
+        else
           gh release delete $TAG_NAME -y
-          echo "$TAG_NAME has been deleted."
-        fi  
-        gh release create $TAG_NAME ./nupkg/*.nupkg --title "Release $TAG_NAME" --notes "Automated release for $TAG_NAME"
-        
+          gh release create $TAG_NAME ./nupkg/*.nupkg --title "Release $TAG_NAME" --notes "Automated release for $TAG_NAME"
+        fi
+
+    - name: Publish to GitHub Packages
+      env:
+        GITHUB_TOKEN: ${{ secrets.GH_PACKAGES_TOKEN }}
+      run: |
+        dotnet nuget add source --username ${{ github.actor }} --password $GITHUB_TOKEN --store-password-in-clear-text --name github "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+        dotnet nuget push "./nupkg/*.nupkg" --source github
 
     - name: Upload package to GitHub Release
       uses: actions/upload-release-asset@v1
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        upload_url: ${{ steps.create_update_release.outputs.upload_url }}
         asset_path: ./nupkg/*.nupkg
         asset_name: sk-eventsourcing-${{ github.ref_name }}.nupkg
         asset_content_type: application/zip
