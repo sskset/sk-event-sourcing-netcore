@@ -1,38 +1,40 @@
-﻿namespace SK.EventSourcing;
+﻿
 using System;
 using System.Collections.Generic;
 using System.Linq;
-
-public abstract class AggregateRoot
+namespace SK.EventSourcing
 {
-    private readonly List<DomainEvent> _changes = [];
-
-    public Guid Id { get; protected set; } = Guid.NewGuid();
-    public int Version { get; protected set; } = 0;
-
-    public IEnumerable<DomainEvent> GetUncommittedChanges() => _changes.AsEnumerable();
-
-    public void MarkChangesAsCommitted() => _changes.Clear();
-
-    protected void ApplyChange(DomainEvent @event, bool isNew = true)
+    public abstract class AggregateRoot
     {
-        this.GetType()
-            .GetMethod("Apply", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance, null, [@event.GetType()], null)
-            .Invoke(this, new[] { @event });
+        private readonly List<DomainEvent> _changes = [];
 
-        if (isNew)
+        public Guid Id { get; protected set; } = Guid.NewGuid();
+        public int Version { get; protected set; } = 0;
+
+        public IEnumerable<DomainEvent> GetUncommittedChanges() => _changes.AsEnumerable();
+
+        public void MarkChangesAsCommitted() => _changes.Clear();
+
+        protected void ApplyChange(DomainEvent @event, bool isNew = true)
         {
-            _changes.Add(@event);
+            this.GetType()
+                .GetMethod("Apply", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance, null, [@event.GetType()], null)
+                .Invoke(this, new[] { @event });
+
+            if (isNew)
+            {
+                _changes.Add(@event);
+            }
+
+            Version++;
         }
 
-        Version++;
-    }
-
-    public void LoadFromHistory(IEnumerable<DomainEvent> history)
-    {
-        foreach (var @event in history)
+        public void LoadFromHistory(IEnumerable<DomainEvent> history)
         {
-            ApplyChange(@event, isNew: false);
+            foreach (var @event in history)
+            {
+                ApplyChange(@event, isNew: false);
+            }
         }
     }
 }
